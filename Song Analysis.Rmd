@@ -1,0 +1,335 @@
+---
+title: "Song Analysis"
+author: "Eileen Hsu, Stephanie Ting"
+date: "2023-04-24"
+output: html_document
+---
+
+## Introduction
+
+Over time, music has evolved into many different genres and styles, from the classical music of the 1800s to the jazz of the 1920s to the pop songs of the 21st century. As the years go by, certain styles of music seem to greatly increase and decrease in popularity. Recently, there has been a large growth in the popularity of modern styles like pop, hip hop, rock, and edm; however, older styles such as country, folk, and jazz also continue to persist. With the development of streaming services like the app “Spotify,” data about the popularity of songs can easily be quantitatively measured using metrics like number of streams. 
+
+Our dataset “Most Streamed Songs (All Time),” uploaded by Amaan Ansari on the website Kaggle.com using data from Spotify's API, utilizes these measures to determine how characteristics of a song affect their success. The dataset presents identifying features of the top 100 most streamed songs of all time on the application, such as their name, artist, and release date; musical characteristics of the songs, such as duration, energy, key, loudness, mode (major or minor), speechiness, acousticness, and instrumentalness; and how successful the songs were, measured using the total number of streams the song has on Spotify. In this report, we will analyze the quantitative factors of the songs to determine whether they have a positive or negative impact on the songs’ success and how large this impact is, and we will compare the qualitative features of the songs to determine which category of songs is most popular. Through this analysis, we will attempt to determine the features of the "perfect song," or the combination of features that would lead a song to have the greatest success.
+
+## Exploratory Analysis
+
+<b>Each song in the dataset contains the following audio features (with quoted descriptions taken directly from the Spotify API):</b><br>
+- id: "The Spotify ID for the track."<br>
+- name: the name of the song<br>
+- Artist: the name of the song's artist<br>
+- Streams: the total number of streams the song has on Spotify (measured in the billions)<br>
+- Release Date: the date the song was released<br>
+- duration: how long is the song is (measured in minutes)<br>
+- energy: "a measure from 0.0 to 1.0 and represents a perceptual measure of intensity and activity. Typically, energetic tracks feel fast, loud, and noisy. For example, death metal has high energy, while a Bach prelude scores low on the scale. Perceptual features contributing to this attribute include dynamic range, perceived loudness, timbre, onset rate, and general entropy."<br>
+- key: "The key the track is in. Integers map to pitches using standard Pitch Class notation. E.g. 0 = C, 1 = C♯/D♭, 2 = D, and so on. If no key was detected, the value is -1."<br>
+- loudness: "The overall loudness of a track in decibels (dB). Loudness values are averaged across the entire track and are useful for comparing relative loudness of tracks. Loudness is the quality of a sound that is the primary psychological correlate of physical strength (amplitude). Values typically range between -60 and 0 db."<br>
+- mode: "Mode indicates the modality (major or minor) of a track, the type of scale from which its melodic content is derived. Major is represented by 1 and minor is 0."<br>
+- speechiness: "Speechiness detects the presence of spoken words in a track. The more exclusively speech-like the recording (e.g. talk show, audio book, poetry), the closer to 1.0 the attribute value. Values above 0.66 describe tracks that are probably made entirely of spoken words. Values between 0.33 and 0.66 describe tracks that may contain both music and speech, either in sections or layered, including such cases as rap music. Values below 0.33 most likely represent music and other non-speech-like tracks."<br>
+- acousticness: "A confidence measure from 0.0 to 1.0 of whether the track is acoustic. 1.0 represents high confidence the track is acoustic."<br>
+- instrumentalness: "Predicts whether a track contains no vocals. "Ooh" and "aah" sounds are treated as instrumental in this context. Rap or spoken word tracks are clearly "vocal". The closer the instrumentalness value is to 1.0, the greater likelihood the track contains no vocal content. Values above 0.5 are intended to represent instrumental tracks, but confidence is higher as the value approaches 1.0."<br>
+- liveness: "Detects the presence of an audience in the recording. Higher liveness values represent an increased probability that the track was performed live. A value above 0.8 provides strong likelihood that the track is live."<br>
+- valence: "A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks with low valence sound more negative (e.g. sad, depressed, angry)."<br>
+- tempo: "The overall estimated tempo of a track in beats per minute (BPM). In musical terminology, tempo is the speed or pace of a given piece and derives directly from the average beat duration."<br>
+- danceability: "Danceability describes how suitable a track is for dancing based on a combination of musical elements including tempo, rhythm stability, beat strength, and overall regularity. A value of 0.0 is least danceable and 1.0 is most danceable."<br>
+
+<br>
+Since some of these factors are a combination of other elements, they can be subjective. In addition, they are based on a scale that would be hard to actually measure during the development of a song. For example, while it may be easy to create a song that has a certain duration, it would be hard to create a song with a specific danceability. Therefore, we will only be analyzing those variables that are easy to directly achieve during creation, which includes the following: duration, loudness, energy, tempo, and valence. The quantitative elements we will also quickly analyze are the key and mode.
+
+<br>
+First, we will analyze the effect of duration on popularity of a song by plotting number of streams (billions) against duration in minutes. Additionally, we will find a linear regression to model the effect of duration on popularity and graph this on the same plot.
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+
+
+features <- read.csv('Features.csv')
+streams <- read.csv('Streams.csv')
+features$Streams <- streams$Streams..Billions. # adding streams to the features dataframe
+
+
+duration_reg <- lm(Streams ~ duration, data=features)
+duration_reg$coefficients
+```
+
+The formula for the linear regression for Streams against duration is:
+$$\text{streams} = 2.0310317 - 0.0371446*\text{duration}$$
+
+```{r}
+dur_slope <- -0.0371446
+dur_intercept <- 2.0310317
+
+ggplot(features) + geom_point(aes(x=duration, y=Streams)) + geom_abline(slope=dur_slope,
+                                                                        intercept=dur_intercept,
+                                                                        color="red")
+ggplot(features, aes(x = duration)) +
+  geom_histogram(bins = 20, fill = "blue", alpha = 0.7) +
+  labs(x = "Duration", y = "Number of Songs", title = "Frequency per Duration")
+```
+
+The line seems to indicate a negative relationship between number of streams and duration. However, the plot does not really seem to show any particular correlation. We will calculate the R^2 coefficient for the line.
+
+```{r}
+dur_sum <- summary(duration_reg)
+dur_sum$r.squared
+```
+Thus, the fraction of the variance explained by this model is:
+$$R^2 = 0.006534709$$
+And the correlation coefficient, R, is its square (negative since the slope is negative):
+$$R = -0.08083755$$
+These numbers are extremely close to 0. This indicates an extremely weak relationship between duration and number of streams. Thus, duration seems to have an extremely minimal impact on the popularity of a song, but if a song is too long, it may very slightly or not at all decrease its chance of success. Based on a purely visual inspection of the data, however, most of the top 100 songs seem to be within the range of 3-4 minutes.
+
+Now, we will look at the summary statistics.
+
+```{r}
+print(dur_sum)
+```
+
+The P-value for this linear regression is 0.424, which is much greater than 0.05. This further indicates that duration does not have a linear relationship with popularity.
+
+Next, we will examine how loudness affects the popularity of a song. We will start by plotting these two variables and finding the linear regression between them again.
+
+```{r}
+loudness_reg <- lm(Streams ~ loudness, data=features)
+loudness_reg$coefficients
+```
+
+The formula for the linear regression for Streams against loudness is:
+$$\text{streams} = 1.78228454 - 0.01841155*\text{loudness}$$
+
+```{r}
+loud_slope <- -0.01841155
+loud_intercept <- 1.78228454
+
+ggplot(features) + geom_point(aes(x=loudness, y=Streams)) + geom_abline(slope=loud_slope,
+                                                                        intercept=loud_intercept,
+                                                                        color="blue")
+ggplot(features, aes(x = loudness)) +
+  geom_histogram(bins = 12, fill = "blue", alpha = 0.7) +
+  labs(x = "Loudness", y = "Number of Songs", title = "Frequency per Loudness")
+```
+
+The line indicates a slight negative relationship between number of streams and loudness. The plot also seems to demonstrate this relationship, although it seems weak. We will calculate the R^2 coefficient for the line.
+
+```{r}
+loud_sum <- summary(loudness_reg)
+loud_sum$r.squared
+```
+Thus, the fraction of the variance explained by this model is:
+$$R^2 = 0.009921431$$
+And the correlation coefficient, R, is its square (negative since the slope is negative):
+$$R = -0.0996063803$$
+These numbers are also extremely close to 0. This indicates a weak, negative relationship between loudness and number of streams. However, all the loudness values are less than or equal to 0, so a smaller negative value would be equivalent to a louder song. This means that although there is a negative relationship between the measure of loudness and number of streams, the louder a song is, the less popular it is. A visual inspection of the scatterplot shows that a higher proportion of the popular songs are on the louder side. Quieter songs seem to more consistently have a moderate number of streams; many of the louder songs are less popular, but the songs with the most streams are also louder.
+
+Now, we will look at the summary statistics.
+
+```{r}
+print(loud_sum)
+```
+
+The P-value for this linear regression is 0.324, which is much greater than 0.05. This indicates that loudness and popularity also might not have a linear relationship.
+
+Next, we will analyze the effect of energy on the popularity of a song. The plot and linear regression model for the variables are as follows:
+
+```{r}
+energy_reg <- lm(Streams ~ energy, data=features)
+energy_reg$coefficients
+```
+
+The formula for the linear regression for Streams against energy is:
+$$\text{streams} = 2.2831403 - 0.6189293*\text{energy}$$
+
+```{r}
+energy_slope <- -0.6189293
+energy_intercept <- 2.2831403
+
+ggplot(features) + geom_point(aes(x=energy, y=Streams)) + geom_abline(slope=energy_slope,
+                                                                        intercept=energy_intercept,
+                                                                        color="green")
+ggplot(features, aes(x = energy)) +
+  geom_histogram(bins = 16, fill = "blue", alpha = 0.7) +
+  labs(x = "Energy", y = "Number of Songs", title = "Frequency per Energy")
+```
+
+The line indicates a negative relationship between number of streams and energy, meaning that songs with higher energy are likely to have a smaller number of streams. We will now calculate the R^2 coefficient for the line.
+
+```{r}
+energy_sum <- summary(energy_reg)
+energy_sum$r.squared
+```
+Thus, the fraction of the variance explained by this model is:
+$$R^2 = 0.07118374$$
+And the correlation coefficient, R, is its square (negative since the slope is negative):
+$$R = -0.26680281$$
+This indicates a relatively weak, negative relationship between energy and number of streams. A visual inspection of the scatterplot shows that most of the popular songs have moderately high energy even though they have a negative relationship. This is likely because the songs that have very low energy are usually more popular than the songs that have very high energy.
+
+Now, we will look at the summary statistics.
+
+```{r}
+print(energy_sum)
+```
+
+The P-value for this linear regression is 0.00729. This is a moderately small value, but still greater than 0.05. This gives moderately strong support for energy and popularity having a linear relationship.
+
+The next variable we will analyze is tempo. The plot and linear regression model for number of streams vs. tempo are as follows:
+
+```{r}
+tempo_reg <- lm(Streams ~ tempo, data=features)
+tempo_reg$coefficients
+```
+
+The formula for the linear regression for Streams against tempo is:
+$$\text{streams} = 2.044657418 - 0.001226001*\text{tempo}$$
+
+```{r}
+tempo_slope <- -0.001226001
+tempo_intercept <- 2.044657418
+
+ggplot(features) + geom_point(aes(x=tempo, y=Streams)) + geom_abline(slope=tempo_slope,
+                                                                        intercept=tempo_intercept,
+                                                                        color="maroon")
+ggplot(features, aes(x = tempo)) +
+  geom_histogram(bins = 25, fill = "blue", alpha = 0.7) +
+  labs(x = "Tempo", y = "Number of SOngs", title = "Frequency per Tempo")
+```
+
+The line indicates an extremely small, negative relationship between number of streams and tempo. Tempo seems to affect popularity a very small amount (or not at all). We will now calculate the R^2 coefficient for the line.
+
+```{r}
+tempo_sum <- summary(tempo_reg)
+tempo_sum$r.squared
+```
+Thus, the fraction of the variance explained by this model is:
+$$R^2 = 0.0095180134$$
+And the correlation coefficient, R, is its square (negative since the slope is negative):
+$$R = -0.0975603044$$
+This shows that the linear relationship between the variables is weak.
+
+Now, we will look at the summary statistics.
+
+```{r}
+print(tempo_sum)
+```
+
+The P-value for this linear regression is 0.334. This is a relatively high value, much greater than 0.05, which does not support tempo and popularity having a linear relationship. This further supports what is shown in the scatterplot, which is that the two variables have essentially no correlation.
+
+The last quantitative element we will analyze is valence. The linear regression and scatterplot of popularity against valence are as follows:
+
+```{r}
+valence_reg <- lm(Streams ~ valence, data=features)
+valence_reg$coefficients
+```
+
+The formula for the linear regression for Streams against valence is:
+$$\text{streams} = 1.9480575 - 0.1036936*\text{valence}$$
+
+```{r}
+valence_slope <- -0.1036936
+valence_intercept <- 1.9480575
+
+ggplot(features) + geom_point(aes(x=valence, y=Streams)) + geom_abline(slope=valence_slope,
+                                                                        intercept=valence_intercept,
+                                                                        color="purple")
+ggplot(features, aes(x = valence)) +
+  geom_histogram(bins = 20, fill = "blue", alpha = 0.7) +
+  labs(x = "Valence", y = "Number of Songs", title = "Frequency per Valence")
+```
+
+The line indicates a negative relationship between number of streams and valence. The R^2 coefficient for the line is as follows:
+
+```{r}
+valence_sum <- summary(valence_reg)
+valence_sum$r.squared
+```
+Thus, the fraction of the variance explained by this model is:
+$$R^2 = 0.003947332$$
+And the correlation coefficient, R, is its square (negative since the slope is negative):
+$$R = -0.0628277964$$
+This shows that the linear relationship between the variables is weak.
+
+Now, we will look at the summary statistics.
+
+```{r}
+print(valence_sum)
+```
+
+The P-value for this linear regression is 0.535. This is an extremely high value. This supports that valence and popularity do NOT have a linear relationship. The scatterplot also supports this conclusion, as it does not seem to show any correlation between the variables.
+
+
+<br>
+Now that we have looked at each of the quantitative variables, we will compare them to see which has the strongest relationship with the popularity of a song. The variables and their P-values are as follows: (duration, 0.424), (loudness, 0.324), (energy, 0.00729), (tempo, 0.334), (valence, 0.535). The smaller a P-value is, the more likely it is that the variable has a linear relationship with the number of streams of a song. Thus, energy has a stronger correlation with popularity than any other variable, followed by loudness, tempo, duration, and finally, valence. These last variables may not even correlate with popularity at all. However, it is important to note that a stronger correlation between the variables does not mean that they affect popularity as strongly. It simply means that the linear effect that they do have is likely to be more accurate.
+
+<br>
+We are now going to take a look at how combining all the variables together will affect the number of streams a song may receive. 
+
+```{r}
+model <- lm(Streams ~ loudness + energy + duration + tempo + valence, data = features)
+summary(model)
+```
+The equation for the linear regression for Streams against all variables is 
+$$\text{streams} = 3.0219178 + 0.0444634*\text{loudness} - 0.9997331*\text{energy} - 0.0474696*\text{duration} - 0.0001371*\text{tempo} - 0.0732414*\text{valence}$$
+<br>
+The estimated coefficients for each feature are quite small especially from energy, showing that each variable doesn't really have an effect on the overall popularity of a song. 
+The P-values for the linear regression of loudness, energy, duration, tempo, and valence on streams are all over 0.05. This is higher than our 0.05 rejection region, which shows that there is not a strong linear relationship between the variables and their effect on the number of streams a song may receive. 
+
+<br>
+
+Now we will analyze the qualitative variables.
+
+```{r}
+mode_reg <- lm(Streams ~ mode, data = features)
+ggplot(features, aes(x = mode)) +
+  geom_histogram(bins = 2, fill = "blue", alpha = 0.7) +
+  labs(x = "Mode", y = "Number of Songs", title = "Frequency per Mode")
+```
+<br>
+It appears that songs with a major key tend to be more popular than those with a minor key. 
+
+```{r}
+key_reg <- lm(Streams ~ key, data = features)
+ggplot(features, aes(x = key)) +
+  geom_histogram(bins = 11, fill = "blue", alpha = 0.7) +
+  labs(x = "Key", y = "Number of Songs", title = "Frequency per Key")
+```
+
+<br>
+It appears that songs in the key of F do the best followed closely by the key of C. 
+
+```{r}
+library(tidyr)
+# convert Release column to date format and extract month and year
+streams$date <- as.Date(streams$Release, format = "%d-%b-%y")
+streams$month <- format(streams$date, format = "%b-%y")
+
+# group data by month
+library(dplyr)
+streams_grouped <- streams %>%
+  group_by(month) %>%
+  summarize(mean_value = mean(Streams..Billions.))
+
+# plot histogram of values by month
+library(ggplot2)
+ggplot(streams, aes(x = month, y = Streams..Billions.)) +
+  geom_bar(stat = "identity", fill = "blue", alpha = 0.7) +
+  labs(x = "Month", y = "Mean Streams (Billions)", title = "Streams by Release Month") +
+  scale_x_discrete(limits = c("Jan-15", "Feb-15", "Mar-15", "Apr-15", "May-15", "Jun-15", "Jul-15", "Aug-15", "Sep-15", "Oct-15", "Nov-15", "Dec-15"))
+```
+<br>
+Lastly, it appears that songs released in the month of April do the best. Possibly because people are listening to more music as they study for finals/the following summer months means that there are more listeners online. 
+
+## Results
+  It appears that there is not a strong correlation between what combination of features will produce THE most popular song. All of the variables observed have negative relationships between itself and the number of streams it results in. There are some noticeable factors from each variable: in duration it appears that songs that lasted betwen 3 to 4 minutes were most commonly produced. Songs between -7.5 and -5 dBs were also more produced. Songs with energy between 0.4 and 0.6 on average were streamed more with an exception to two songs in the 0.6 to 0.8 range. Tempos about 90 bpm to 120 were streamed more frequently. Lastly, songs with valence of about 0.4 did the best. 
+  <br>
+  Valence had the most outliers making it difficult to use to conclude what people were looking for in terms of a popular song.
+  Although there is no strong conclusion as to what creates the perfect Grammy award winning song, there are variables that can help influence it such as the time of year it is released and it being a F or C major key. Sorry Sam.
+  
+## Conclusion
+
+There are some things to note about the results shown by this study. First, as was stated at the beginning of the report, not all of the variables of the songs were analyzed. Characteristics that could reflect many different factors, such as the inclusion of tempo, beat strength, and other elements into the single factor "danceability," were not studied. This means that although the relationships between the popularity of a song and its characteristics may be true to a certain extent, there may be more interplay between those characteristics themselves. For example, even if loudness positively correlates with popularity, would a song with low valence and low loudness be more popular than a song with high valence and low loudness if people prefer to hear certain traits together? In addition, the dataset itself may be lacking in variety. Since all 100 of the data points came from the top 100 most popular songs, songs that are not popular or have average popularity are not studied. This means that the factors we analyze may not actually vary that much within this group of 100 songs but may vary a great deal outside of the group. We only see how the factors make some popular songs more successful than other popular songs but never actually see any measures that may cause a song to be wholly unsuccessful.
+
+Additionally, there are inherent biases that contribute to the popularity of songs. For example, if an artist who releases a new song is already famous/popular, then the song is likely to be much more successful than if an unknown artist released the same song. How much someone likes the artist may also affect how they react to a song. These aspects were not analyzed in this report, but it could be possible that they have a great deal of influence on the popularity of a song, maybe even more so than some of the quantitative factors, especially since we are studying a dataset of already popular songs. Biases in technology may also play a role since those who enjoy music of older genres may also be less likely to listen to them on Spotify, maybe choosing to do so using Youtube, a CD, a radio, or some other device or application.
+
+Finally, the dataset is limited to data taken from the application "Spotify." Spotify was released in 2008, which is relatively recent given the age of many musical compositions. Most of the most popularly streamed songs on the application would therefore also probably be relatively new. The vast majority of the songs in this dataset were released after 2000, with the oldest being released in 1979. Thus, the data does not really take into account long-term changes in musical taste, for example the evolution of popular genres of music. What actually makes a song popular may have been extremely different in the past, and it could be extremely different in the future as people's opinions continue to change and evolve.
+
+In order to gain a more accurate and generalized perspective on this subject, further study should be done. It would be best to expand the scope of songs in terms of both popularity and time. This would allow for a broader analysis of the song traits and a greater understanding of how they change. In addition, analyzing the data using other models besides the linear regression model used in this study may allow for more insight into how they affect the songs' popularity. For example, the R^2 value for number of streams vs. duration was extremely small for the calculated linear regression, meaning that the factors are not linearly correlated. Some other function, such as a quadratic model, may fit the data better (for example, maybe popularity vs. duration fits a parabola where songs that are too short or too long are less popular). These suggestions would greatly improve the accuracy and scope of the study.
